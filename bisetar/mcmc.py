@@ -2,6 +2,7 @@ import numpy as np
 from scipy.stats import multivariate_normal as mvn
 from scipy.stats import invgamma
 from scipy.stats import norm
+from statsmodels.stats.correlation_tools import cov_nearest
 
 class BiDirSetar:
     def __init__(self, x):
