@@ -1,0 +1,154 @@
+import numpy as np
+from scipy.stats import multivariate_normal as mvn
+from scipy.stats import invgamma
+from scipy.stats import norm
+
+class BiDirSetar:
+    def __init__(self, x):
+        self.x = x
+
+        # Initial r
+        r01 = np.median(x[:-1, 1:])
+        r02 = np.median(x[1:, :-1])
+        r0 = [r01, r02]
+
+        # Initial phi
+        xr = self.splitx(r0)
+        phi0 = np.empty((4, 4))
+        for i in range(4):
+            b, v = self.lsfit(xr[i][0], xr[i][1], xr[i][2])[:2]
+            phi0[i, :3] = b
+            phi0[i, 3] = v
+        phi0 = phi0.flatten()
+
+        # Initial theta
+        self.theta0 = np.concatenate((r0, phi0))
+
+
+    def splitx(self, r):
+        # Label each observation
+        ler1 = self.x[:-1, 1:] <= r[0]
+        ler2 = self.x[1:, :-1] <= r[1]
+        i1 = ler1 & ler2
+        i2 = ler1 & (~ler2)
+        i3 = (~ler1) & ler2
+        i4 = (~ler1) & (~ler2)
+        # R1
+        y1 = self.x[1:, 1:][i1]
+        x11 = self.x[:-1, 1:][i1]
+        x21 = self.x[1:, :-1][i1]
+        # R2
+        y2 = self.x[1:, 1:][i2]
+        x12 = self.x[:-1, 1:][i2]
+        x22 = self.x[1:, :-1][i2]
+        # R3
+        y3 = self.x[1:, 1:][i3]
+        x13 = self.x[:-1, 1:][i3]
+        x23 = self.x[1:, :-1][i3]
+        # R4
+        y4 = self.x[1:, 1:][i4]
+        x14 = self.x[:-1, 1:][i4]
+        x24 = self.x[1:, :-1][i4]
+
+        return ((y1, x11, x21),
+                (y2, x12, x22),
+                (y3, x13, x23),
+                (y4, x14, x24))
+
+    def lsfit(self, y, x1, x2):
+        n = len(y)
+        x = np.vstack((np.ones(n), x1, x2)).T
+        d = x.shape[1]
+        c = np.linalg.pinv(x.T @ x)
+        b = c @ x.T @ y
+        v = np.var(y - x @ b, ddof=d)
+        return (b, v, c, n, d)
+
+    def logp(self, theta):
+        # Split data based on r1 and r2
+        ((y1, x11, x21),
+         (y2, x12, x22),
+         (y3, x13, x23),
+         (y4, x14, x24)) = self.splitx(theta[:2])
+
+        # Check if each regime contains sufficient observations
+        if len(y1) < 5 or len(y2) < 5 or len(y3) < 5 or len(y4) < 5:
+            return -np.inf
+
+        # Conditional means
+        yhat1 = theta[2] + theta[3] * x11 + theta[4] * x21
+        yhat2 = theta[6] + theta[7] * x12 + theta[8] * x22
+        yhat3 = theta[10] + theta[11] * x13 + theta[12] * x23
+        yhat4 = theta[14] + theta[15] * x14 + theta[16] * x24
+
+        # Log-posterior
+        ll1 = norm.logpdf(y1, yhat1, np.sqrt(theta[5]))
+        ll2 = norm.logpdf(y2, yhat2, np.sqrt(theta[9]))
+        ll3 = norm.logpdf(y3, yhat3, np.sqrt(theta[13]))
+        ll4 = norm.logpdf(y4, yhat4, np.sqrt(theta[17]))
+        lp = np.sum(ll1) + np.sum(ll2) + \
+             np.sum(ll3) + np.sum(ll4) - \
+             np.log(theta[5]) - np.log(theta[9]) - \
+             np.log(theta[13]) - np.log(theta[17])
+        return lp
+
+    def sample_phi(self, r):
+        xr = self.splitx(r)
+        phi = np.empty((4, 4))
+        for i in range(4):
+            b, v, c, n, d = self.lsfit(xr[i][0], xr[i][1], xr[i][2])
+            nu = n - d
+            phi[i, 3] = invgamma.rvs(a=(nu / 2), scale=(nu * v / 2))
+            phi[i, :3] = mvn.rvs(b, phi[i, 3] * c)
+        return phi.flatten()
+
+    def sample_r(self, r_old, phi_old, cq):
+        r_new = mvn.rvs(r_old, cq)
+        theta_new = np.concatenate((r_new, phi_old))
+        theta_old = np.concatenate((r_old, phi_old))
+        lp_new = self.logp(theta_new)
+        lp_old = self.logp(theta_old)
+        lu = np.log(np.random.uniform(0, 1))
+        if lu <= (lp_new - lp_old):
+            r = r_new
+            ia = True
+        else:
+            r = r_old
+            ia = False
+        return (r, ia)
+
+    def sample_theta(self, n_obs, theta0, cq):
+        theta = np.empty((n_obs, len(theta0)))
+        n_acc = 0
+        theta[0] = theta0
+        for i in range(1, n_obs):
+            theta[i, :2], ia = self.sample_r(
+                theta[i - 1, :2],
+                theta[i - 1, 2:],
+                cq)
+            theta[i, 2:] = self.sample_phi(theta[i, :2])
+            n_acc += ia
+        return (theta, n_acc / (n_obs - 1))
+
+    def sample_theta_adapt(self, h0, cq0, w, ep):
+        n_ep = len(ep)
+        theta = n_ep * [None]
+        ar = np.empty(n_ep)
+
+        # First epoch
+        h = h0
+        cq = cq0
+        theta[0], ar[0] = self.sample_theta(
+            ep[0], self.theta0, h ** 2 * cq)
+
+        for i in range(1, n_ep):
+            rs = theta[i - 1][:, :2]
+            cq = (1 - w[i - 1]) * cq + w[i - 1] * np.cov(rs.T)
+            cq = cov_nearest(cq)
+            h = h * np.exp(ar[i - 1] - 0.23)
+            theta0_new = theta[i - 1][-1]
+            theta[i], ar[i] = self.sample_theta(
+                ep[i], theta0_new, h ** 2 * cq)
+            print(f'Epoch: {i + 1}/{n_ep}', end='\r')
+
+        return (theta, ar)
