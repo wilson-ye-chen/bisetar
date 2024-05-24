@@ -1,10 +1,12 @@
 import numpy as np
 from scipy.stats import multivariate_normal as mvn
+from scipy.stats import multivariate_t as mvt
 from scipy.stats import invgamma
 from scipy.stats import norm
+from scipy.special import logsumexp
 from statsmodels.stats.correlation_tools import cov_nearest
 
-class BiDirSetar:
+class BiDirSetarRwm:
     def __init__(self, x):
         self.x = x
 
@@ -153,3 +155,67 @@ class BiDirSetar:
             print(f'Epoch: {i + 1}/{n_ep}', end='\r')
 
         return (theta, ar)
+
+class BiDirSetarIs(BiDirSetarRwm):
+    def __init__(self, x):
+        super().__init__(x)
+
+    def tm_logpdf(self, x, mu, sd, df):
+        n = mu.shape[0]
+        d = mu.shape[1]
+        s = sd ** 2 * np.eye(d)
+        lpi = mvt.logpdf(mu, loc=x, shape=s, df=df)
+        return logsumexp(-np.log(n) + lpi)
+
+    def tm_random(self, mu, sd, df):
+        n = mu.shape[0]
+        d = mu.shape[1]
+        i = np.random.choice(n)
+        s = sd ** 2 * np.eye(d)
+        return mvt.rvs(mu[i], s, df)
+
+    def jmpdst(self, x):
+        dt = np.diff(x, axis=0)
+        n2 = np.sum(dt ** 2, axis=1)
+        return np.mean(n2)
+
+    def sample_r(self, r_old, phi_old, mu, sd, df):
+        r_new = self.tm_random(mu, sd, df)
+        theta_new = np.concatenate((r_new, phi_old))
+        theta_old = np.concatenate((r_old, phi_old))
+        lp_new = self.logp(theta_new)
+        lp_old = self.logp(theta_old)
+        lq_new = self.tm_logpdf(r_new, mu, sd, df)
+        lq_old = self.tm_logpdf(r_old, mu, sd, df)
+
+        lu = np.log(np.random.uniform(0, 1))
+        la = (lp_new - lp_old) + (lq_old - lq_new)
+        if lu <= la:
+            r = r_new
+            ia = True
+        else:
+            r = r_old
+            ia = False
+        return (r, ia)
+
+    def sample_theta(self, n_obs, theta0, mu, sd, df=4):
+        theta = np.empty((n_obs, len(theta0)))
+        theta[0] = theta0
+        ia = np.empty(n_obs - 1)
+        for i in range(1, n_obs):
+            theta[i, :2], ia[i - 1] = self.sample_r(
+                theta[i - 1, :2],
+                theta[i - 1, 2:],
+                mu, sd, df)
+            theta[i, 2:] = self.sample_phi(theta[i, :2])
+        return (theta, np.mean(ia))
+
+    def learn_scale(self, theta0, mu, sd_grid, df=4, n_mc=200):
+        n_grid = len(sd_grid)
+        ar = np.empty(n_grid)
+        for i in range(n_grid):
+            theta, ar[i] = self.sample_theta(
+                n_mc, theta0, mu, sd_grid[i], df)
+            print(f'Epoch: {i + 1}/{n_grid}', end='\r')
+        sd = sd_grid[np.argmax(ar)]
+        return (sd, ar)
