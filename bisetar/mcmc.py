@@ -101,6 +101,15 @@ class BiDirSetarRwm:
         for i in range(4):
             b, v, c, n, d = self.lsfit(xr[i][0], xr[i][1], xr[i][2])
             nu = n - d
+
+            # debug <<
+            if nu * v <= 0:
+                print('n=', n)
+                print('nu=', nu)
+                print('v=', v)
+            # debug >>
+
+
             phi[i, 3] = invgamma.rvs(a=(nu / 2), scale=(nu * v / 2))
             phi[i, :3] = mvn.rvs(b, phi[i, 3] * c)
         return phi.flatten()

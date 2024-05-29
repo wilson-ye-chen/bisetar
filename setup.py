@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='bisetar',
-    version='0.2.0',
+    version='0.2.1-alpha',
     description='MCMC for Bayesian Bidirectional SETAR model',
     url='https://github.com/wilson-ye-chen/bisetar',
     author='Wilson Ye Chen',
