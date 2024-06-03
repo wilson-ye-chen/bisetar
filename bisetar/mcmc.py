@@ -111,6 +111,8 @@ class BiDirSetarRwm:
                 print('n=', n)
                 print('nu=', nu)
                 print('v=', v)
+                print('r=', r)
+                print('i=', i)
                 print('-' * 50)
                 break
             # debug >>
