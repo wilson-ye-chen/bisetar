@@ -103,15 +103,18 @@ class BiDirSetarRwm:
             nu = n - d
 
             # debug <<
-            if nu * v <= 0:
+            try:
+                phi[i, 3] = invgamma.rvs(a=(nu / 2), scale=(nu * v / 2))
+                phi[i, :3] = mvn.rvs(b, phi[i, 3] * c)
+            except ValueError:
+                print('-' * 50)
                 print('n=', n)
                 print('nu=', nu)
                 print('v=', v)
+                print('-' * 50)
+                break
             # debug >>
 
-
-            phi[i, 3] = invgamma.rvs(a=(nu / 2), scale=(nu * v / 2))
-            phi[i, :3] = mvn.rvs(b, phi[i, 3] * c)
         return phi.flatten()
 
     def sample_r(self, r_old, phi_old, cq):
