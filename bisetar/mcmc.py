@@ -107,14 +107,14 @@ class BiDirSetarRwm:
                 phi[i, 3] = invgamma.rvs(a=(nu / 2), scale=(nu * v / 2))
                 phi[i, :3] = mvn.rvs(b, phi[i, 3] * c)
             except ValueError:
-                print('-' * 50)
+                print('---[sample_phi]---')
                 print('n=', n)
                 print('nu=', nu)
                 print('v=', v)
                 print('r=', r)
                 print('i=', i)
-                print('-' * 50)
-                break
+                print('---[sample_phi]---')
+                raise ValueError('n=3')
             # debug >>
 
         return phi.flatten()
@@ -221,7 +221,19 @@ class BiDirSetarIs(BiDirSetarRwm):
                 theta[i - 1, :2],
                 theta[i - 1, 2:],
                 mu, sd, df)
-            theta[i, 2:] = self.sample_phi(theta[i, :2])
+
+            # debug <<
+            try:
+                theta[i, 2:] = self.sample_phi(theta[i, :2])
+            except ValueError:
+                print('---[sample_theta]---')
+                print('i=', i)
+                print('r=', theta[i, :2])
+                print('accept=', ia[i - 1])
+                print('---[sample_theta]---')
+                raise ValueError('n=3')
+            # debug >>
+
         return (theta, np.mean(ia))
 
     def learn_scale(self, theta0, mu, sd_grid, df=4, n_mc=200):
