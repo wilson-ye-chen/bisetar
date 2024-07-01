@@ -9,7 +9,7 @@ class BiDirSetarCls(BiDirSetarRwm):
         r1, r2 = np.meshgrid(q, q)
         r1 = r1.reshape(-1, 1)
         r2 = r2.reshape(-1, 1)
-        self.r_grid = np.hstack(r1, r2)
+        self.r_grid = np.hstack((r1, r2))
 
     def cls(self, r_grid=None):
         if r_grid == None:
