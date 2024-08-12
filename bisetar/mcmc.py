@@ -6,13 +6,13 @@ from scipy.stats import norm
 from scipy.special import logsumexp
 from statsmodels.stats.correlation_tools import cov_nearest
 
-class BiDirSetarRwm:
+class BiSetar:
     def __init__(self, x):
         self.x = x
 
         # Initial r
-        r01 = np.median(x[:-1, 1:])
-        r02 = np.median(x[1:, :-1])
+        r01 = np.nanmedian(x[:-1, 1:])
+        r02 = np.nanmedian(x[1:, :-1])
         r0 = [r01, r02]
 
         # Initial phi
@@ -26,7 +26,6 @@ class BiDirSetarRwm:
 
         # Initial theta
         self.theta0 = np.concatenate((r0, phi0))
-
 
     def splitx(self, r):
         # Label each observation
@@ -52,11 +51,16 @@ class BiDirSetarRwm:
         y4 = self.x[1:, 1:][i4]
         x14 = self.x[:-1, 1:][i4]
         x24 = self.x[1:, :-1][i4]
+        # Find upper observations
+        u1 = ~np.isnan(y1)
+        u2 = ~np.isnan(y2)
+        u3 = ~np.isnan(y3)
+        u4 = ~np.isnan(y4)
 
-        return ((y1, x11, x21),
-                (y2, x12, x22),
-                (y3, x13, x23),
-                (y4, x14, x24))
+        return ((y1[u1], x11[u1], x21[u1]),
+                (y2[u2], x12[u2], x22[u2]),
+                (y3[u3], x13[u3], x23[u3]),
+                (y4[u4], x14[u4], x24[u4]))
 
     def lsfit(self, y, x1, x2):
         n = len(y)
@@ -66,6 +70,11 @@ class BiDirSetarRwm:
         b = c @ x.T @ y
         v = np.var(y - x @ b, ddof=d)
         return (b, v, c, n, d)
+
+
+class BiSetarBayes(BiSetar):
+    def __init__(self, x):
+        super().__init__(x)
 
     def logp(self, theta):
         # Split data based on r1 and r2
@@ -104,6 +113,11 @@ class BiDirSetarRwm:
             phi[i, 3] = invgamma.rvs(a=(nu / 2), scale=(nu * v / 2))
             phi[i, :3] = mvn.rvs(b, phi[i, 3] * c)
         return phi.flatten()
+
+
+class BiSetarRwm(BiSetarBayes):
+    def __init__(self, x):
+        super().__init__(x)
 
     def sample_r(self, r_old, phi_old, cq):
         r_new = mvn.rvs(r_old, cq)
@@ -156,7 +170,8 @@ class BiDirSetarRwm:
 
         return (theta, ar)
 
-class BiDirSetarIs(BiDirSetarRwm):
+
+class BiSetarIs(BiSetarBayes):
     def __init__(self, x):
         super().__init__(x)
 

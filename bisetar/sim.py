@@ -1,6 +1,6 @@
 import numpy as np
 
-def sim_bdsetar(omg, a1, b1, ss, r1, r2, n):
+def sim_bisetar(omg, a1, b1, ss, r1, r2, n):
     ''' Usage example:
     omg = [0, 0, 0, 0]
     a1 = [0.6, 0.3, 0.2, 0.1]
@@ -9,7 +9,7 @@ def sim_bdsetar(omg, a1, b1, ss, r1, r2, n):
     r1 = 10
     r2 = 10
     n = 50
-    x = sim_bdsetar(omg, a1, b1, s, r1, r2, n)
+    x = sim_bisetar(omg, a1, b1, s, r1, r2, n)
     '''
 
     x = np.empty((n, n))

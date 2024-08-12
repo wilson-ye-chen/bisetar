@@ -1,7 +1,7 @@
 import numpy as np
-from bisetar.mcmc import BiDirSetarRwm
+from bisetar.mcmc import BiSetar
 
-class BiDirSetarCls(BiDirSetarRwm):
+class BiSetarCls(BiSetar):
     def __init__(self, x):
         super().__init__(x)
         p = np.arange(0.1, 0.9, 0.01)
