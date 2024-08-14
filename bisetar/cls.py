@@ -27,3 +27,12 @@ class BiSetarCls(BiSetar):
                     v_ttl[i] += v
         i_min = np.nanargmin(v_ttl)
         return(r_grid[i_min], v_ttl[i_min], v_ttl)
+
+
+class BiSetarClsUpper(BiSetarCls):
+    def __init__(self, x):
+        # Set lower observations to NaNs
+        self.x = x.copy()
+        n = x.shape[0]
+        np.fliplr(self.x)[np.tril_indices(n, k=-1)] = np.nan
+        super().__init__(self.x)

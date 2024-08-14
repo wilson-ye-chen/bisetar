@@ -234,3 +234,21 @@ class BiSetarIs(BiSetarBayes):
             print(f'Epoch: {i + 1}/{n_grid}', end='\r')
         sd = sd_grid[np.argmax(ar)]
         return (sd, ar)
+
+
+class BiSetarRwmUpper(BiSetarRwm):
+    def __init__(self, x):
+        # Set lower observations to NaNs
+        self.x = x.copy()
+        n = x.shape[0]
+        np.fliplr(self.x)[np.tril_indices(n, k=-1)] = np.nan
+        super().__init__(self.x)
+
+
+class BiSetarIsUpper(BiSetarIs):
+    def __init__(self, x):
+        # Set lower observations to NaNs
+        self.x = x.copy()
+        n = x.shape[0]
+        np.fliplr(self.x)[np.tril_indices(n, k=-1)] = np.nan
+        super().__init__(self.x)
