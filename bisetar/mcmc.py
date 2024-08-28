@@ -84,7 +84,7 @@ class BiSetarBayes(BiSetar):
          (y4, x14, x24)) = self.splitx(theta[:2])
 
         # Check if each regime contains sufficient observations
-        if len(y1) < 5 or len(y2) < 5 or len(y3) < 5 or len(y4) < 5:
+        if len(y1) < 8 or len(y2) < 8 or len(y3) < 8 or len(y4) < 8:
             return -np.inf
 
         # Conditional means
