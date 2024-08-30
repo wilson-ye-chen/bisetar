@@ -114,6 +114,20 @@ class BiSetarBayes(BiSetar):
             phi[i, :3] = mvn.rvs(b, phi[i, 3] * c)
         return phi.flatten()
 
+    def apply_cons(self, theta):
+        a = theta[:, [2, 6, 10, 14]]
+        b = [
+            theta[:, [3, 4]],
+            theta[:, [7, 8]],
+            theta[:, [11, 12]],
+            theta[:, [15, 16]]]
+        v = theta[:, [5, 9, 13, 17]]
+        n = theta.shape[0]
+        out = np.empty((n, 4), dtype=bool)
+        for i in range(4):
+            out[:, i] = np.sum(np.abs(b[i]), axis=1) >= 1
+        keep = np.sum(out, axis=1) == 0
+        return theta[keep]
 
 class BiSetarRwm(BiSetarBayes):
     def __init__(self, x):
