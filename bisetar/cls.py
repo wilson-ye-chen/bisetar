@@ -5,7 +5,7 @@ class BiSetarCls(BiSetar):
     def __init__(self, x):
         super().__init__(x)
         p = np.arange(0.1, 0.9, 0.01)
-        q = np.quantile(x, p)
+        q = np.nanquantile(x, p)
         r1, r2 = np.meshgrid(q, q)
         r1 = r1.reshape(-1, 1)
         r2 = r2.reshape(-1, 1)
