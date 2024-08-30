@@ -28,6 +28,15 @@ class BiSetarCls(BiSetar):
         i_min = np.nanargmin(v_ttl)
         return(r_grid[i_min], v_ttl[i_min], v_ttl)
 
+    def find_feasible(self, n_min):
+        n_grid = self.r_grid.shape[0]
+        nr = np.zeros((n_grid, 4))
+        for i in range(n_grid):
+            xr = self.splitx(self.r_grid[i])
+            for j in range(4):
+                nr[i, j] = len(xr[j][0])
+        fsb = np.sum(nr >= n_min, axis=1) == 4
+        return (self.r_grid[fsb], nr)
 
 class BiSetarClsUpper(BiSetarCls):
     def __init__(self, x):
