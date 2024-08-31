@@ -2,10 +2,9 @@ import numpy as np
 
 class BiSetarForecast:
     def __init__(self, x, theta, nmc):
-        # Set lower observations to NaNs
-        self.x = x.copy()
+        # NaNs are to be replaced by forecasts
+        self.x = x
         n = x.shape[0]
-        np.fliplr(self.x)[np.tril_indices(n, k=-1)] = np.nan
 
         # Indices of NaNs
         self.ifrc = np.argwhere(np.isnan(self.x))
@@ -60,3 +59,9 @@ class BiSetarForecast:
                 x2 = np.full(self.nmc, lft)
             self.xhat[i] = self.forecast_one(x1, x2)
             self.irev[s, t] = i
+
+    def antidiag_indices(self, offset=-1):
+        n = self.x.shape[0]
+        row = np.arange(0 - offset, n)
+        col = np.flip(row)
+        return np.vstack((row, col)).T
