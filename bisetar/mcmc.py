@@ -19,9 +19,9 @@ class BiSetar:
         xr = self.splitx(r0)
         phi0 = np.empty((4, 4))
         for i in range(4):
-            b, v = self.lsfit(xr[i][0], xr[i][1], xr[i][2])[:2]
+            b, sse, c, cinv, n = self.lsfit(xr[i][0], xr[i][1], xr[i][2])
             phi0[i, :3] = b
-            phi0[i, 3] = v
+            phi0[i, 3] = sse / (n - 3)
         phi0 = phi0.flatten()
 
         # Initial theta
@@ -65,11 +65,12 @@ class BiSetar:
     def lsfit(self, y, x1, x2):
         n = len(y)
         x = np.vstack((np.ones(n), x1, x2)).T
-        d = x.shape[1]
-        c = np.linalg.pinv(x.T @ x)
-        b = c @ x.T @ y
-        v = np.var(y - x @ b, ddof=d)
-        return (b, v, c, n, d)
+        c = x.T @ x
+        cinv = np.linalg.pinv(c)
+        b = cinv @ x.T @ y
+        e = y - x @ b
+        sse = np.dot(e, e)
+        return (b, sse, c, cinv, n)
 
 
 class BiSetarBayes(BiSetar):
@@ -108,10 +109,9 @@ class BiSetarBayes(BiSetar):
         xr = self.splitx(r)
         phi = np.empty((4, 4))
         for i in range(4):
-            b, v, c, n, d = self.lsfit(xr[i][0], xr[i][1], xr[i][2])
-            nu = n - d
-            phi[i, 3] = invgamma.rvs(a=(nu / 2), scale=(nu * v / 2))
-            phi[i, :3] = mvn.rvs(b, phi[i, 3] * c)
+            b, sse, c, cinv, n = self.lsfit(xr[i][0], xr[i][1], xr[i][2])
+            phi[i, 3] = invgamma.rvs(a=((n - 3) / 2), scale=(sse / 2))
+            phi[i, :3] = mvn.rvs(b, phi[i, 3] * cinv)
         return phi.flatten()
 
     def apply_cons(self, theta):
