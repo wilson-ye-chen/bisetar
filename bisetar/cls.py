@@ -16,25 +16,25 @@ class BiSetarCls(BiSetar):
             r_grid = self.r_grid
 
         n_grid = r_grid.shape[0]
-        v_ttl = np.zeros(n_grid)
+        sse_ttl = np.zeros(n_grid)
         for i in range(n_grid):
             xr = self.splitx(r_grid[i])
             for j in range(4):
                 if len(xr[j][0]) < 5:
-                    v_ttl[i] = np.nan
+                    sse_ttl[i] = np.nan
                 else:
-                    v = self.lsfit(xr[j][0], xr[j][1], xr[j][2])[1]
-                    v_ttl[i] += v
-        i_min = np.nanargmin(v_ttl)
-        return(r_grid[i_min], v_ttl[i_min], v_ttl)
+                    sse = self.lsfit(xr[j][0], xr[j][1], xr[j][2])[1]
+                    sse_ttl[i] += sse
+        i_min = np.nanargmin(sse_ttl)
+        return(r_grid[i_min], sse_ttl[i_min], sse_ttl)
 
     def learn_phi(self, r):
         xr = self.splitx(r)
         phi = np.empty((4, 4))
         for i in range(4):
-            b, v = self.lsfit(xr[i][0], xr[i][1], xr[i][2])[:2]
+            b, sse, c, cinv, n = self.lsfit(xr[i][0], xr[i][1], xr[i][2])
             phi[i, :3] = b
-            phi[i, 3] = v
+            phi[i, 3] = sse / (n - 3)
         return phi.flatten()
 
     def find_feasible(self, n_min):
