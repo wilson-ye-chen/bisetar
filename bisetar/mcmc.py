@@ -4,6 +4,7 @@ from scipy.stats import multivariate_t as mvt
 from scipy.stats import invgamma
 from scipy.stats import norm
 from scipy.special import logsumexp
+from scipy.special import loggamma
 from statsmodels.stats.correlation_tools import cov_nearest
 
 class BiSetar:
@@ -128,6 +129,38 @@ class BiSetarBayes(BiSetar):
             out[:, i] = np.sum(np.abs(b[i]), axis=1) >= 1
         keep = np.sum(out, axis=1) == 0
         return theta[keep]
+
+
+class BiSetarMarginal(BiSetarBayes):
+    def __init__(self, x):
+        super().__init__(x)
+
+    def logp_i(self, y, x1, x2):
+        b, sse, c, cinv, n = self.lsfit(y, x1, x2)
+        t1 = (3 - n) / 2 * np.log(np.pi * sse)
+        t2 = loggamma((n - 3) / 2)
+        t3 = -0.5 * np.linalg.slogdet(c)[1]
+        return t1 + t2 + t3
+
+    def logp(self, r):
+        # Split data based on r1 and r2
+        ((y1, x11, x21),
+         (y2, x12, x22),
+         (y3, x13, x23),
+         (y4, x14, x24)) = self.splitx(r)
+
+        # Check if each regime contains sufficient observations
+        # This can be considered a prior on r1 and r2
+        if len(y1) < 8 or len(y2) < 8 or len(y3) < 8 or len(y4) < 8:
+            return -np.inf
+
+        # Log marginal posterior
+        lp1 = self.logp_i(y1, x11, x21)
+        lp2 = self.logp_i(y2, x12, x22)
+        lp3 = self.logp_i(y3, x13, x23)
+        lp4 = self.logp_i(y4, x14, x24)
+        return lp1 + lp2 + lp3 + lp4
+        
 
 class BiSetarRwm(BiSetarBayes):
     def __init__(self, x):
