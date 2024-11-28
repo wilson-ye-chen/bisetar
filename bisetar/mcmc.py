@@ -6,6 +6,8 @@ from scipy.stats import norm
 from scipy.special import logsumexp
 from scipy.special import loggamma
 from statsmodels.stats.correlation_tools import cov_nearest
+from mcmclib.metropolis import rwm_adapt
+from bisetar.discrete import GridDist
 
 class BiSetar:
     def __init__(self, x):
@@ -133,7 +135,12 @@ class BiSetarBayes(BiSetar):
 
 class BiSetarMarginal(BiSetarBayes):
     def __init__(self, x):
-        super().__init__(x)
+        self.x = x
+
+        # Default sampler configuration
+        self.u = np.arange(0.01, 1.0, 0.01)
+        self.alpha = [0.3] * 10
+        self.epoch = [200] * 10
 
     def logp_i(self, y, x1, x2):
         b, sse, c, cinv, n = self.lsfit(y, x1, x2)
@@ -160,7 +167,23 @@ class BiSetarMarginal(BiSetarBayes):
         lp3 = self.logp_i(y3, x13, x23)
         lp4 = self.logp_i(y4, x14, x24)
         return lp1 + lp2 + lp3 + lp4
-        
+
+    def sample_r(self, n, method='grid'):
+        q = np.nanquantile(self.x, self.u)
+        if method == 'grid':
+            gd = GridDist(q, q, self.logp)
+            return gd.sample(n)
+        elif method == 'mcmc':
+            med = q[int(len(q) / 2)]
+            r0 = np.array([med, med])
+            return rwm_adapt(
+                self.logp, r0,
+                1.0, np.eye(2),
+                self.alpha, self.epoch + [n],
+                pb=False)[0][-1]
+        else:
+            raise ValueError('Invalid method')
+
 
 class BiSetarRwm(BiSetarBayes):
     def __init__(self, x):
