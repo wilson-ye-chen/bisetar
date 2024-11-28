@@ -4,9 +4,9 @@ from bisetar.mcmc import BiSetar
 class BiSetarCls(BiSetar):
     def __init__(self, x):
         super().__init__(x)
-        p = np.arange(0.1, 0.9, 0.01)
-        q = np.nanquantile(x, p)
-        r1, r2 = np.meshgrid(q, q)
+        u = np.arange(0.01, 1.0, 0.01)
+        q = np.nanquantile(x, u)
+        r1, r2 = np.meshgrid(q, q, indexing='ij')
         r1 = r1.reshape(-1, 1)
         r2 = r2.reshape(-1, 1)
         self.r_grid = np.hstack((r1, r2))
