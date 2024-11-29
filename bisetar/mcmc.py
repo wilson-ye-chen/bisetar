@@ -158,7 +158,8 @@ class BiSetarMarginal(BiSetarBayes):
 
         # Check if each regime contains sufficient observations
         # This can be considered a prior on r1 and r2
-        if len(y1) < 8 or len(y2) < 8 or len(y3) < 8 or len(y4) < 8:
+        m = int(0.1 * self.x.size)
+        if len(y1) < m or len(y2) < m or len(y3) < m or len(y4) < m:
             return -np.inf
 
         # Log marginal posterior
