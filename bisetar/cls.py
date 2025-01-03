@@ -13,7 +13,7 @@ class BiSetarCls(BiSetar):
         self.n_min = int(0.1 * x.size)
 
     def learn_r(self, r_grid=None):
-        if r_grid == None:
+        if r_grid is None:
             r_grid = self.r_grid
 
         n_grid = r_grid.shape[0]
