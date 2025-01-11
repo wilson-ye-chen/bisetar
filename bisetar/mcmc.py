@@ -307,6 +307,15 @@ class BiSetarIs(BiSetarBayes):
         return (sd, ar)
 
 
+class BiSetarMarginalUpper(BiSetarMarginal):
+    def __init__(self, x, offset=-1):
+        # Set lower observations to NaNs
+        self.x = x.copy()
+        n = x.shape[0]
+        np.fliplr(self.x)[np.tril_indices(n, k=offset)] = np.nan
+        super().__init__(self.x)
+
+
 class BiSetarRwmUpper(BiSetarRwm):
     def __init__(self, x, offset=-1):
         # Set lower observations to NaNs
