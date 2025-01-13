@@ -137,6 +137,10 @@ class BiSetarMarginal(BiSetarBayes):
     def __init__(self, x):
         self.x = x
 
+        # Default minimum regime size
+        n = np.count_nonzero(np.isfinite(x))
+        self.m = int(np.clip(0.05 * n, a_min=10, a_max=None))
+
         # Default sampler configuration
         self.u = np.arange(0.01, 1.0, 0.01)
         self.alpha = [0.3] * 10
@@ -149,7 +153,7 @@ class BiSetarMarginal(BiSetarBayes):
         t3 = -0.5 * np.linalg.slogdet(c)[1]
         return t1 + t2 + t3
 
-    def logp(self, r):
+    def logp(self, r, m=None):
         # Split data based on r1 and r2
         ((y1, x11, x21),
          (y2, x12, x22),
@@ -158,7 +162,8 @@ class BiSetarMarginal(BiSetarBayes):
 
         # Check if each regime contains sufficient observations
         # This can be considered a prior on r1 and r2
-        m = int(0.1 * self.x.size)
+        if m is None:
+            m = self.m
         if len(y1) < m or len(y2) < m or len(y3) < m or len(y4) < m:
             return -np.inf
 
@@ -169,16 +174,20 @@ class BiSetarMarginal(BiSetarBayes):
         lp4 = self.logp_i(y4, x14, x24)
         return lp1 + lp2 + lp3 + lp4
 
-    def sample_r(self, n, method='grid'):
+    def sample_r(self, n, method='grid', m=None):
         q = np.nanquantile(self.x, self.u)
+        if m is None:
+            logp = self.logp
+        else:
+            logp = lambda r: self.logp(r, m)
         if method == 'grid':
-            gd = GridDist(q, q, self.logp)
+            gd = GridDist(q, q, logp)
             return gd.sample(n)
         elif method == 'mcmc':
             med = q[int(len(q) / 2)]
             r0 = np.array([med, med])
             return rwm_adapt(
-                self.logp, r0,
+                logp, r0,
                 1.0, np.eye(2),
                 self.alpha, self.epoch + [n],
                 pb=False)[0][-1]
