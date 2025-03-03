@@ -139,7 +139,7 @@ class BiSetarMarginal(BiSetarBayes):
 
         # Default minimum regime size
         n = np.count_nonzero(np.isfinite(x))
-        self.m = int(np.clip(0.05 * n, a_min=10, a_max=None))
+        self.m = int(np.clip(0.1 * n, a_min=8, a_max=None))
 
         # Default sampler configuration
         self.u = np.arange(0.01, 1.0, 0.01)

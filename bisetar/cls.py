@@ -10,18 +10,22 @@ class BiSetarCls(BiSetar):
         r1 = r1.reshape(-1, 1)
         r2 = r2.reshape(-1, 1)
         self.r_grid = np.hstack((r1, r2))
-        self.n_min = int(0.1 * x.size)
 
-    def learn_r(self, r_grid=None):
+        n = np.count_nonzero(np.isfinite(x))
+        self.n_min = int(np.clip(0.1 * n, a_min=8, a_max=None))
+
+    def learn_r(self, r_grid=None, n_min=None):
         if r_grid is None:
             r_grid = self.r_grid
+        if n_min is None:
+            n_min = self.n_min
 
         n_grid = r_grid.shape[0]
         sse_ttl = np.zeros(n_grid)
         for i in range(n_grid):
             xr = self.splitx(r_grid[i])
             for j in range(4):
-                if len(xr[j][0]) < self.n_min:
+                if len(xr[j][0]) < n_min:
                     sse_ttl[i] = np.nan
                 else:
                     sse = self.lsfit(xr[j][0], xr[j][1], xr[j][2])[1]
