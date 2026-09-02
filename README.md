@@ -119,5 +119,4 @@ bisetar/
 If you use this package, please cite the accompanying paper:
 
 ```text
-Chen et al. Bayesian BiSETAR Models for Loss Reserving with Threshold Uncertainty.
-```
+Zhang et al. (2026). Bayesian BiSETAR Models for Loss Reserving with Threshold Uncertainty. Manuscript submitted to Insurance: Mathematics and Economics.
